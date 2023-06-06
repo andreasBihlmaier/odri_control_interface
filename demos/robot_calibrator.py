@@ -36,26 +36,57 @@ def control_loop(config_file_path):
     print("Set all actuators to zero positions and press Enter")
 
     # Control loop
+    c = 0
     while not device.is_timeout and i.is_alive():
 
         # Update sensor data (IMU, encoders, Motion capture)
         device.parse_sensor_data()
 
+        positions = device.joints.positions
+        velocities = device.joints.velocities
+        measured_torques = device.joints.measured_torques
+
+        if c % 2000 == 0:
+            print("joint pos:    ", np.array2string(
+                positions, precision=3, separator=", ", max_line_width=200))
+            print("joint vel:    ", np.array2string(velocities,
+                  precision=3, separator=", ", max_line_width=200))
+            print("joint torque: ", np.array2string(measured_torques,
+                  precision=3, separator=", ", max_line_width=200))
+            # device.robot_interface.PrintStats()
+        c += 1
+
         # Send command to the robot
         device.send_command_and_wait_end_of_cycle(joint_calibrator.dt)
 
-    m = np.pi / device.joints.gear_ratios
-    offsets = (
-        np.mod(joint_calibrator.position_offsets - device.joints.positions + m, 2 * m)
-        - m
-    )
-    diff = np.mod(joint_calibrator.position_offsets - offsets + m, 2 * m) - m
+    #m = np.pi / device.joints.gear_ratios
+    # offsets = (
+    #    np.mod(joint_calibrator.position_offsets -
+    #           device.joints.positions + m, 2 * m)
+    #    - m
+    # )
+    #diff = np.mod(joint_calibrator.position_offsets - offsets + m, 2 * m) - m
 
-    print("Difference with the previous position_offsets values:")
-    print(np.array2string(np.abs(diff), precision=3, separator=", "))
+    #print("Difference with the previous position_offsets values:")
+    #print(np.array2string(np.abs(diff), precision=3, separator=", "))
+
+    #print("Values to copy-paste in the position_offsets field of the yaml config file:")
+    #print(np.array2string(offsets, precision=4, separator=", "))
+
+    offsets = joint_calibrator.position_offsets - device.joints.positions
+    diff = joint_calibrator.position_offsets - offsets
+
+    print("Previous position_offsets values:")
+    print(np.array2string(joint_calibrator.position_offsets,
+          precision=4, separator=", ", max_line_width=200))
+
+    print("Absolute difference with the previous position_offsets values:")
+    print(np.array2string(np.abs(diff), precision=4,
+          separator=", ", max_line_width=200))
 
     print("Values to copy-paste in the position_offsets field of the yaml config file:")
-    print(np.array2string(offsets, precision=4, separator=", "))
+    print(np.array2string(offsets, precision=4,
+          separator=", ", max_line_width=200))
 
     return 0
 
